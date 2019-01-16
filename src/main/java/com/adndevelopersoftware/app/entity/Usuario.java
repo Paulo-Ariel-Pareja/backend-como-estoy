@@ -40,9 +40,6 @@ public class Usuario implements Serializable{
 	@Size(min = 20, max = 90, message = "la clave privada debe 20 y 90 caracteres!")
 	private String clavePrivada;
 		
-	@Column(nullable = false)
-	@NotNull(message = "El mensaje es obligatorio")
-	@Size(min = 1, max = 90, message = "el mensaje debe de tener entre 1 y 90 caracteres!")
 	@OneToMany(fetch=FetchType.LAZY)
 	private List<Mensaje> mensaje;
 

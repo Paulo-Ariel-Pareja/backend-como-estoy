@@ -18,8 +18,8 @@ public class UsuarioServiceImplementacion implements IUsuarioService{
 	}
 
 	@Override
-	public Usuario save(Usuario cliente) {
-		return dao.save(cliente);
+	public Usuario save(Usuario usuario) {
+		return dao.save(usuario);
 	}
 
 	@Override

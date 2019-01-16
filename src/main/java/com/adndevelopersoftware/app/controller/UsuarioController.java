@@ -18,12 +18,16 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.adndevelopersoftware.app.entity.DatoEnvia;
+import com.adndevelopersoftware.app.entity.DatoRecibe;
 import com.adndevelopersoftware.app.entity.Mensaje;
 import com.adndevelopersoftware.app.entity.Usuario;
+import com.adndevelopersoftware.app.service.MensajeServiceImplementacion;
 import com.adndevelopersoftware.app.service.UsuarioServiceImplementacion;
 
 @RestController
@@ -34,63 +38,82 @@ public class UsuarioController {
 	private BCryptPasswordEncoder passwordEncoder;
 
 	@Autowired
-	UsuarioServiceImplementacion service;
+	UsuarioServiceImplementacion uService;
+	
+	@Autowired
+	MensajeServiceImplementacion mService;
 
-	@PostMapping("/usuarios/{usuario}/{clavePersonal}/{clavePersonal}")
-	public ResponseEntity<?> insertarComentario(@PathVariable String usuario, @PathVariable String clavePersonal,
-			//@RequestBody String clavePrivada, 
-			@RequestBody Mensaje mensaje, 
-			BindingResult result) {
+	@PutMapping("/usuarios/{usuario}/{clavePersonal}")
+	public ResponseEntity<?> insertarComentario(@PathVariable String usuario, 
+												@PathVariable String clavePersonal,
+												@RequestBody DatoRecibe datosRecibe) {
 
 		Map<String, Object> response = new HashMap<>();
 
-		if (result.hasErrors()) {
-			List<String> errors = result.getFieldErrors().stream()
-					.map(err -> "El campo '" + err.getField() + "' " + err.getDefaultMessage())
-					.collect(Collectors.toList());
-
-			response.put("errors", errors);
-			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.BAD_REQUEST);
-		}
-
-		Mensaje mensajeNuevo = null;
 		Usuario usuarioEncontrado = null;
-		Usuario usuarioNuevo = null;
-
+		Usuario usuarioUpdated = null;
 		try {
-			usuarioEncontrado = service.findByUsuarioAndClavePersonal(usuario, clavePersonal);
+			usuarioEncontrado = uService.findByUsuarioAndClavePersonal(usuario, clavePersonal);
 		} catch (DataAccessException e) {
 			response.put("mensaje", "Error al realizar la consulta");
 			response.put("error", e.getMessage().concat(": ".concat(e.getMostSpecificCause().getMessage())));
 			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
-		String clavePrivada = "123456789123456789";
-		System.out.println("clave privada: "  + clavePrivada);
-		String dbPass = usuarioEncontrado.getClavePrivada();
-		if (usuarioEncontrado == null || !passwordEncoder.matches(clavePrivada, dbPass)) {
+
+		String clavePrivada = datosRecibe.getClave();
+		
+		if (usuarioEncontrado == null || !passwordEncoder.matches(clavePrivada, usuarioEncontrado.getClavePrivada())) {
 			response.put("mensaje", "El usuario o las claves son incorrectas");
 			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.NOT_FOUND);
 		}
 
+		Mensaje mensajeNuevo = new Mensaje();
+		Usuario usuarioGuardar = new Usuario();
 		List<Mensaje> listaMensajes = usuarioEncontrado.getMensaje();
-		
-		mensajeNuevo.setCoordenadas(mensaje.getCoordenadas());
-		mensajeNuevo.setMensaje(mensaje.getMensaje());
-		listaMensajes.add(mensajeNuevo);
-		usuarioEncontrado.setMensaje(listaMensajes);
-		usuarioNuevo = service.save(usuarioEncontrado);
-		response.put("mensaje", "datos actualizados");
-		response.put("usuario", usuarioNuevo);
-		return new ResponseEntity<Map<String, Object>>(response, HttpStatus.OK);
+		try {
+			String coordenadas = datosRecibe.getCoordenadas();
+			if(coordenadas==null) {
+				response.put("error", "Las coordenadas son obligatorias!");
+				return new ResponseEntity<Map<String, Object>>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+			}
+			String mensaje = datosRecibe.getMensaje();
+			if(mensaje==null) {
+				response.put("error", "El mensaje es obligatorio!");
+				return new ResponseEntity<Map<String, Object>>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+			}
 
+			mensajeNuevo.setCoordenadas(coordenadas);
+			mensajeNuevo.setMensaje(mensaje);
+			Mensaje mensajeGuardado = mService.save(mensajeNuevo);
+			listaMensajes.add(mensajeGuardado);
+		} catch (DataAccessException e) {
+			response.put("mensaje", "Error registrar el mensaje.");
+			response.put("error", e.getMessage().concat(": ".concat(e.getMostSpecificCause().getMessage())));
+			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		}	
+		
+		try {
+			usuarioEncontrado.setMensaje(listaMensajes);
+			usuarioUpdated = uService.save(usuarioEncontrado);
+		} catch (DataAccessException e) {
+			response.put("mensaje", "Error al actualizar al cliente.");
+			response.put("error", e.getMessage().concat(": ".concat(e.getMostSpecificCause().getMessage())));
+			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+
+		Collections.sort(listaMensajes, new MensajeComparatorByFecha(false));
+		DatoEnvia datoEnvia = new DatoEnvia();
+		datoEnvia.setMensaje(listaMensajes);
+		return new ResponseEntity<DatoEnvia>(datoEnvia, HttpStatus.CREATED);
 	}
 
-	@PostMapping("/usuarios/{usuario}")
-	public ResponseEntity<?> insertarNuevoUsuario(@Valid @RequestBody Usuario usuario, BindingResult result) {
+	@PostMapping("/usuarios")
+	public ResponseEntity<?> insertarNuevoUsuario(@Valid @RequestBody Usuario usuario, 
+												BindingResult result) {
 
 		Usuario usuarioNuevo = null;
 		Map<String, Object> response = new HashMap<>();
-
+		
 		if (result.hasErrors()) {
 			List<String> errors = result.getFieldErrors().stream()
 					.map(err -> "El campo '" + err.getField() + "' " + err.getDefaultMessage())
@@ -99,15 +122,20 @@ public class UsuarioController {
 			response.put("errors", errors);
 			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.BAD_REQUEST);
 		}
-
+		
+		String claveOriginal = null;
+		
 		try {
-			usuarioNuevo = service.save(usuario);
+			claveOriginal = usuario.getClavePrivada();
+			String clave = passwordEncoder.encode(claveOriginal);
+			usuario.setClavePrivada(clave);
+			usuarioNuevo = uService.save(usuario);
 		} catch (DataAccessException e) {
 			response.put("mensaje", "Error registrar el usuario.");
 			response.put("error", e.getMessage().concat(": ".concat(e.getMostSpecificCause().getMessage())));
 			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
-		response.put("mensaje", "Usuario creado con exito!");
+		usuarioNuevo.setClavePrivada(claveOriginal);
 		response.put("usuario", usuarioNuevo);
 		return new ResponseEntity<Map<String, Object>>(response, HttpStatus.CREATED);
 	}
@@ -117,7 +145,7 @@ public class UsuarioController {
 		Usuario usuarioEncontrado = null;
 		Map<String, Object> response = new HashMap<>();
 		try {
-			usuarioEncontrado = service.findByUsuarioAndClavePersonal(usuario, clavePersonal);
+			usuarioEncontrado = uService.findByUsuarioAndClavePersonal(usuario, clavePersonal);
 		} catch (DataAccessException e) {
 			response.put("mensaje", "Error al realizar la consulta");
 			response.put("error", e.getMessage().concat(": ".concat(e.getMostSpecificCause().getMessage())));
@@ -129,11 +157,12 @@ public class UsuarioController {
 			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.NOT_FOUND);
 		}
 
-		List<Mensaje> mOtros = usuarioEncontrado.getMensaje();
-		Collections.sort(mOtros, new MensajeComparatorByFecha(false));
+		List<Mensaje> enviarMensajes = usuarioEncontrado.getMensaje();
+		Collections.sort(enviarMensajes, new MensajeComparatorByFecha(false));
 
-		usuarioEncontrado.setMensaje(mOtros);
-		return new ResponseEntity<Usuario>(usuarioEncontrado, HttpStatus.OK);
+		DatoEnvia datoEnvia = new DatoEnvia();
+		datoEnvia.setMensaje(enviarMensajes);
+		return new ResponseEntity<DatoEnvia>(datoEnvia, HttpStatus.OK);
 	}
 
 	class MensajeComparatorByFecha implements Comparator<Mensaje> {

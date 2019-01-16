@@ -13,6 +13,7 @@ import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 
 @Entity
 @Table(name = "mensajes")
@@ -28,10 +29,13 @@ public class Mensaje implements Serializable{
 	@NotNull(message = "Las coordenadas son obligatorias!")
 	private String coordenadas;
 	
+	@Column(nullable = false)
+	@NotNull(message = "El mensaje es obligatorio")
+	@Size(min = 1, max = 90, message = "el mensaje debe de tener entre 1 y 90 caracteres!")
 	private String mensaje;
 	
 	@Column(name = "create_at")
-	@Temporal(TemporalType.DATE)
+	@Temporal(TemporalType.TIMESTAMP)
 	private Date createAt;
 	
 	@PrePersist
