@@ -4,6 +4,10 @@ import com.adndevelopersoftware.app.entity.Usuario;
 
 public interface IUsuarioService {
 	
+	public Usuario save(Usuario cliente);
+	
 	public Usuario findByUsuarioAndClavePersonal(String usuario, String clavePersonal);
+	
+	public Usuario findByUsuarioAndClavePersonalAndClavePrivada(String usuario, String clavePersonal, String clavePrivada);
 
 }

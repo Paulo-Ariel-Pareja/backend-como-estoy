@@ -33,8 +33,12 @@ public class Usuario implements Serializable{
 	private String usuario;
 	
 	@Column(nullable = false)
-	@Size(min = 10, max = 90, message = "el mensaje debe de tener entre 10 y 90 caracteres!")
+	@Size(min = 10, max = 90, message = "la clave publica debe tener entre 10 y 90 caracteres!")
 	private String clavePersonal;
+	
+	@Column(nullable = false)
+	@Size(min = 20, max = 90, message = "la clave privada debe 20 y 90 caracteres!")
+	private String clavePrivada;
 		
 	@Column(nullable = false)
 	@NotNull(message = "El mensaje es obligatorio")
@@ -72,6 +76,14 @@ public class Usuario implements Serializable{
 
 	public void setClavePersonal(String clavePersonal) {
 		this.clavePersonal = clavePersonal;
+	}
+
+	public String getClavePrivada() {
+		return clavePrivada;
+	}
+
+	public void setClavePrivada(String clavePrivada) {
+		this.clavePrivada = clavePrivada;
 	}
 	
 }

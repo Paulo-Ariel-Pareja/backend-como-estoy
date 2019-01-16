@@ -9,6 +9,8 @@ public interface IUsuarioDao extends CrudRepository<Usuario, Long>{
 	public Usuario findByUsuario(String usuario);
 	
 	public Usuario findByUsuarioAndClavePersonal(String usuario, String clavePersonal);
+	
+	public Usuario findByUsuarioAndClavePersonalAndClavePrivada(String usuario, String clavePersonal, String clavePrivada);
 
 	/*
 	@Query(value = "select u.id, u.usuario, u.clave_personal, m.id, m.coordenadas, m.create_at, m.mensaje from "

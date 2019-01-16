@@ -17,4 +17,16 @@ public class UsuarioServiceImplementacion implements IUsuarioService{
 		return dao.findByUsuarioAndClavePersonal(usuario, clavePersonal);
 	}
 
+	@Override
+	public Usuario save(Usuario cliente) {
+		return dao.save(cliente);
+	}
+
+	@Override
+	public Usuario findByUsuarioAndClavePersonalAndClavePrivada(String usuario, String clavePersonal,
+			String clavePrivada) {
+		return 	dao.findByUsuarioAndClavePersonalAndClavePrivada(usuario, clavePersonal, clavePrivada);
+
+	}
+
 }
